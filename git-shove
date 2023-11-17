@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# Check if the repository is dirty
+if [[ $(git status --porcelain) ]]; then
+    echo "You have uncommitted changes, proceeding automatically would be dangerous."
+    git status -s
+    exit 1
+fi
+
+# Check if the origin remote exists
+if ! git remote show origin &> /dev/null; then
+    echo "git shove requires a configured origin"
+    exit 1
+fi
+
+# Get the current branch and main branch
+local_branch=$(git branch --show-current)
+main_branch=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+
+# Check if the local branch is the same as the main branch
+if [ "$local_branch" = "$main_branch" ]; then
+    echo "cannot shove to $main_branch branch"
+    exit 1
+fi
+
+# Determine if the branch is new
+is_new_branch=1
+if git show-ref --verify --quiet refs/remotes/origin/"$local_branch"; then
+    is_new_branch=0
+    diff=$(git diff "$local_branch" origin/"$local_branch")
+    if [ -z "$diff" ]; then
+        echo "already up to date"
+    fi
+fi
+
+# Push the changes
+git push origin "$local_branch" --force
+
+# Print information about the operation
+if [ $is_new_branch -eq 1 ]; then
+    echo "'$local_branch' was created"
+else
+    echo "changes pushed"
+fi

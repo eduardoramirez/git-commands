@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Function to display error messages and exit
+fatal() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+# Check for correct usage
+if [ $# -lt 1 ]; then
+    fatal "Incorrect usage, missing branch name. Use: git start [feature]"
+fi
+
+new_branch_name="$1"
+
+# Check for uncommitted changes
+if [[ $(git status --porcelain) ]]; then
+    fatal "You have uncommitted changes, proceeding automatically would be dangerous."
+fi
+
+# Check if branch already exists
+if git show-ref --verify --quiet refs/heads/"$new_branch_name"; then
+    fatal "A branch called '$new_branch_name' already exists."
+fi
+
+# Update the main branch
+main_branch=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+if ! ([ -z "$main_branch" ] || [ "$main_branch" == "(unknown)" ]); then
+    git fetch origin "$main_branch":"$main_branch"
+fi
+
+# Create and checkout new branch
+echo "Creating new branch $new_branch_name"
+git checkout -b "$new_branch_name"
+
+echo "New feature branch created for '$new_branch_name'."

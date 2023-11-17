@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Function to display error messages and exit
+fatal() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+# Check for uncommitted changes
+if [[ $(git status --porcelain) ]]; then
+    fatal "You have uncommitted changes. Please commit or stash them before proceeding."
+fi
+
+# Identify the main branch
+main_branch=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+if [ -z "$main_branch" ]; then
+    fatal "Unable to identify the main branch."
+fi
+
+# Start the interactive rebase
+new_commit_message="$1"
+echo "Starting interactive rebase..."
+if [ -n "$new_commit_message" ]; then
+    GIT_SEQUENCE_EDITOR="sed -i '1s/pick/squash/'" git rebase -i --autosquash --autostash "$main_branch" && \
+    git commit --amend -m "$new_commit_message"
+else
+    GIT_SEQUENCE_EDITOR="sed -i '1s/pick/squash/'" git rebase -i --autosquash --autostash "$main_branch"
+fi
+
+if [ $? -ne 0 ]; then
+    fatal "Rebase failed. Please resolve any conflicts and complete the rebase process manually."
+fi
+
+# Completing the squash process
+echo "All commits have been squashed into a single commit."
