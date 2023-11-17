@@ -1,16 +1,33 @@
 #!/bin/sh
 
+error() {
+    local RED="\033[0;31m"
+    local BOLD="\033[1m"
+    local RESET="\033[0m"
+    printf "${RED}${BOLD}Error: %s${RESET}\n" "$1" >&2
+}
+
+fatal() {
+    error "$1"
+    exit 1
+}
+
+success() {
+    local GREEN="\033[0;32m"
+    local RESET="\033[0m"
+    printf "${GREEN}> %s${RESET}\n" "$1"
+}
+
 # Check if the repository is dirty
 if [[ $(git status --porcelain) ]]; then
-    echo "You have uncommitted changes, proceeding automatically would be dangerous."
+    error "You have uncommitted changes, proceeding automatically would be dangerous."
     git status -s
     exit 1
 fi
 
 # Check if the origin remote exists
 if ! git remote show origin &> /dev/null; then
-    echo "git shove requires a configured origin"
-    exit 1
+    fatal "git shove requires a configured origin"
 fi
 
 # Get the current branch and main branch
@@ -19,8 +36,7 @@ main_branch=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
 
 # Check if the local branch is the same as the main branch
 if [ "$local_branch" = "$main_branch" ]; then
-    echo "cannot shove to $main_branch branch"
-    exit 1
+    fatal "cannot shove to '$main_branch' branch"
 fi
 
 # Determine if the branch is new
@@ -29,7 +45,8 @@ if git show-ref --verify --quiet refs/remotes/origin/"$local_branch"; then
     is_new_branch=0
     diff=$(git diff "$local_branch" origin/"$local_branch")
     if [ -z "$diff" ]; then
-        echo "already up to date"
+        success "already up to date"
+        exit 0
     fi
 fi
 
@@ -38,7 +55,7 @@ git push origin "$local_branch" --force
 
 # Print information about the operation
 if [ $is_new_branch -eq 1 ]; then
-    echo "'$local_branch' was created"
+    success "'$local_branch' was created"
 else
-    echo "changes pushed"
+    success "changes pushed"
 fi

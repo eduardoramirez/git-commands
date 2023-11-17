@@ -1,9 +1,23 @@
-#!/bin/bash
+#!/bin/sh
 
-# Function to display error messages and exit
 fatal() {
-    echo "Error: $1" >&2
+    local RED="\033[0;31m"
+    local BOLD="\033[1m"
+    local RESET="\033[0m"
+    printf "${RED}${BOLD}Error: %s${RESET}\n" "$1" >&2
     exit 1
+}
+
+info() {
+    local BLUE="\033[0;34m"
+    local RESET="\033[0m"
+    printf "${BLUE}> %s${RESET}\n" "$1"
+}
+
+success() {
+    local GREEN="\033[0;32m"
+    local RESET="\033[0m"
+    printf "${GREEN}> %s${RESET}\n" "$1"
 }
 
 # Check for correct usage
@@ -25,12 +39,16 @@ fi
 
 # Update the main branch
 main_branch=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
-if ! ([ -z "$main_branch" ] || [ "$main_branch" == "(unknown)" ]); then
-    git fetch origin "$main_branch":"$main_branch"
+if [ -z "$main_branch" ] || [ "$main_branch" == "(unknown)" ]; then
+    fatal "Unable to identify the main branch."
 fi
 
+git checkout "$main_branch"
+git remote update --prune
+git pull origin "$main_branch" --no-tags
+
 # Create and checkout new branch
-echo "Creating new branch $new_branch_name"
+info "Creating new branch '$new_branch_name'"
 git checkout -b "$new_branch_name"
 
-echo "New feature branch created for '$new_branch_name'."
+success "New feature branch created for '$new_branch_name'."
