@@ -35,7 +35,7 @@ rebase can both squash and remove commits.
 
 ### Squash
 
-`git squash`
+`git squash [message]`
 
 Squashes all commits on the current branch since its divergence from the main branch into a single commit:
 

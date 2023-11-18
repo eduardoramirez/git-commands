@@ -25,19 +25,19 @@ if [ -z "$main_branch" ] || [ "$main_branch" == "(unknown)" ]; then
     fatal "Unable to identify the main branch."
 fi
 
-# Start the interactive rebase
-new_commit_message="$1"
-info "Starting interactive rebase..."
-if [ -n "$new_commit_message" ]; then
-    GIT_SEQUENCE_EDITOR="sed -i '1s/pick/squash/'" git rebase -i --autosquash --autostash "$main_branch" && \
-    git commit --amend -m "$new_commit_message"
+# Check if a custom commit message is provided
+if [ "$#" -eq 1 ]; then
+    commit_message="$1"
 else
-    GIT_SEQUENCE_EDITOR="sed -i '1s/pick/squash/'" git rebase -i --autosquash --autostash "$main_branch"
+    # Find the first commit message
+    commit_message=$(git log --format=%B --reverse HEAD ^"$main_branch" | head -n 1)
+    if [ -z "$commit_message" ]; then
+        fatal "No commits found to squash, and no commit message provided."
+    fi
 fi
 
-if [ $? -ne 0 ]; then
-    fatal "Rebase failed. Please resolve any conflicts and complete the rebase process manually."
-fi
+# Perform a soft reset to the main branch
+git reset --soft $(git merge-base HEAD "$main_branch")
+git commit -m "$commit_message"
 
-# Completing the squash process
-success "All commits have been squashed into a single commit."
+success "Squash complete."
